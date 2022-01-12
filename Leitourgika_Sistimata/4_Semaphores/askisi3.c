@@ -67,23 +67,28 @@ int main(int argc, char* argv[])
                 {
                     semWait(semGroup, i-1, &sop);
                 }
+                sprintf(outputSpecific, "%s%d\n", outputString[i],j+1);
+                printOutput(outputSpecific, fd, strlen(outputSpecific));
+                memset(outputSpecific, 0, strlen(outputSpecific));
                 if (i<2)
                 {
                     semSignal(semGroup, i, &sop);
                 }
-                sprintf(outputSpecific, "%s%d\n", outputString[i],j+1);
-                printOutput(outputSpecific, fd, strlen(outputSpecific));
-                memset(outputSpecific, 0, BFSIZE);
+               
             }
-            break;
+            break;              // break gia na mi sinexisei kai kanei fork
         }
     }
-
-    if (c_pid[0] != 0)      // parent
+    if (c_pid[0] != 0)      // parent wait
     {
         wait(0);
         wait(0);
+        wait(0);
     }
-    
+    if ( close(fd) != 0)
+    {
+        perror("Closing error");
+        exit(-1);
+    }
     return 0;
 }

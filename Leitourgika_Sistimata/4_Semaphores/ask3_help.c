@@ -25,9 +25,10 @@ void semSignal(int semId, int semIndex, struct sembuf *sop)
     }
 }
 
-void printOutput(char* output, int fd, int bufSize)
+// Output se file kai se stdin
+void printOutput(char* output, int fd, int strSize)
 {
-    if (write (fd, output, bufSize) != bufSize)
+    if (write (fd, output, strSize) != strSize)
     {
         perror("Write Error");
         exit(-1);

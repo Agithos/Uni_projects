@@ -1,3 +1,6 @@
+// theloume kai se ena arxeio
+
+
 #include <stdio.h>
 #include <sys/sem.h>
 #include <unistd.h>
@@ -33,6 +36,15 @@ void semSignal(int semid, int index)
         printf("Error");
     }
 }
+
+/*
+  check = semctl(semGroup, i-1, GETVAL);
+                    if(check < 1)
+                    {
+                        printf("--Waiting %d--\n", i);
+                    }
+/*
+
 
 int main(int argc, char argv[])
 {

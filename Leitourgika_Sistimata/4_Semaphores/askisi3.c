@@ -2,13 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/sem.h>
-#include "semun.h"
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <string.h>
+#include "ask3_help.h"
 
-void semWait(int semId, int semIndex);
-void semSignal(int semId, int semIndex);
+#define BFSIZE 64
 
-
-char* outputString[3] = {   "eimai o KOKKINOS power ranger!\t\t",           // leipei A:
+char* outputString[3] = {   "eimai o KOKKINOS power ranger!\t\tA:",
                             "eimai o MPLE power ranger!\t\tB:",
                             "eimai o MAVROS power ranger!\t\tC:"};
 
@@ -21,7 +22,17 @@ int main(int argc, char* argv[])
     int semGroup;
     int check;
     unsigned short initArray[2] = {0,0};          // gia SETVAL
+    char* path = "output.txt";
+    char outputSpecific[BFSIZE];
+    memset(outputSpecific, 0, BFSIZE);
 
+    // Open file
+    int fd;
+    if ( (fd = open(path, O_CREAT|O_WRONLY|O_TRUNC, 0666)) < 0 )
+    {
+        perror("File open failed");
+        exit(-1);
+    }
 
     // Create semaphores
     if ( (semGroup = semget(IPC_PRIVATE, 2, IPC_CREAT|0666)) == -1) // 0 gia A-B, 1 gia B-C
@@ -33,11 +44,7 @@ int main(int argc, char* argv[])
     semUnion.array = initArray;
     semctl(semGroup, 0, SETALL, semUnion);
 
-    check = semctl(semGroup, 0, GETVAL);
-    printf("First is : %d\n", check);
-    check = semctl(semGroup, 1, GETVAL);
-    printf("Second is : %d\n", check);
-
+    // Create Forked Processes
     for (int i=0; i<3; i++)
     {
         // Fork
@@ -52,55 +59,31 @@ int main(int argc, char* argv[])
             /* CHILDREN */
             if(i)
             {
-                semWait(semGroup, i-1);
+                semWait(semGroup, i-1, &sop);
             }
-            for (int j=0; j<100; j++)
+            for (int j=0; j<100-i; j++)
             {
                 if (i)
                 {
-                    check = semctl(semGroup, i-1, GETVAL);
-                    if(check < 1)
-                    {
-                        printf("--Waiting %d--\n", i);
-                    }
-                    semWait(semGroup, i-1);
+                    semWait(semGroup, i-1, &sop);
                 }
                 if (i<2)
                 {
-                    semSignal(semGroup, i);
+                    semSignal(semGroup, i, &sop);
                 }
-                printf("%s%d\n", outputString[i],j+1);
-                fflush(NULL);
+                sprintf(outputSpecific, "%s%d\n", outputString[i],j+1);
+                printOutput(outputSpecific, fd, strlen(outputSpecific));
+                memset(outputSpecific, 0, BFSIZE);
             }
             break;
         }
     }
-    check = semctl(semGroup, 0, GETVAL);
-    printf("First is : %d\n", check);
-    check = semctl(semGroup, 1, GETVAL);
-    printf("Second is : %d\n", check);
 
-    return 0;
-}
-
-void semWait(int semId,int semIndex)
-{
-    sop.sem_num = semIndex;
-    sop.sem_op = -1;
-    sop.sem_flg = 0;
-    if (semop(semId, &sop, 1) != 0)
+    if (c_pid[0] != 0)      // parent
     {
-        perror("Semaphore error");
-    } 
-}
-
-void semSignal(int semId, int semIndex)
-{
-    sop.sem_num = semIndex;
-    sop.sem_op = 1;
-    sop.sem_flg = 0;
-    if (semop(semId, &sop, 1) != 0)
-    {
-        perror("Semaphore error");
+        wait(0);
+        wait(0);
     }
+    
+    return 0;
 }
